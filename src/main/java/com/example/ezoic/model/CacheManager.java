@@ -1,7 +1,6 @@
 package com.example.ezoic.model;
 
-import org.springframework.http.HttpStatus;
-
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Optional;
@@ -63,7 +62,28 @@ public class CacheManager {
         // Remove all slashes from the end of the url.
         url = url.replaceAll("/$", "");
 
+
         CacheEntry cacheEntry = new CacheEntry(url, websiteData, timeout.orElse(DEFAULT_TIMEOUT));
-        this.cache.put(url, cacheEntry);
+        if(timeout.get() > 0L) {
+            this.cache.put(url, cacheEntry);
+        }
+    }
+
+    public void clearCache(String url){
+
+        // Remove all slashes from the end of the url.
+        url = url.replaceAll("/$", "");
+        cache.remove(url);
+    }
+
+    public ArrayList<String> getCache(){
+
+        ArrayList<String> cacheData = new ArrayList<>();
+
+        for(String key: cache.keySet()){
+            CacheEntry entry = cache.get(key);
+            cacheData.add(key + ": " + entry.TimeToLive + " " + entry.TimeOfEntry);
+        }
+        return cacheData;
     }
 }

@@ -21,6 +21,16 @@ public class MainController {
         String url = (queryUrl.isPresent())? queryUrl.get() : "";
         return cachingService.getWebsiteData(url, timeout);
     }
+    @RequestMapping(value = "/cachingService/clear", method = RequestMethod.GET)
+    public String clearCache(@RequestParam Optional<String> queryUrl)
+            throws Exception{
+        String url = (queryUrl.isPresent())? queryUrl.get() : "";
+        return cachingService.clearCache(url);
+    }
 
+    @RequestMapping(value = "/cachingService/retriveCache", method = RequestMethod.GET)
+    public String getCache() throws Exception {
+            return cachingService.getCache();
+    }
 
 }

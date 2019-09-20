@@ -5,10 +5,8 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import com.example.ezoic.model.CacheManager;
 import org.springframework.stereotype.Service;
@@ -18,7 +16,7 @@ import org.springframework.stereotype.Service;
 public class CachingServiceImpl implements CachingService {
 
     private static final String USER_AGENT = "Mozilla/5.0";
-    public int timeOutt = 0;
+    public Optional<Long> timeOutt = Optional.empty();
     CacheManager cacheManager = CacheManager.getInstance();
 
     private String getHTTPResponse(URL url){
@@ -35,23 +33,20 @@ public class CachingServiceImpl implements CachingService {
             System.out.println("\nSending 'GET' request to URL : " + url);
             System.out.println("Response Code : " + responseCode);
 
-            System.out.println("List all headers:");
-            Map<String, List<String>> map = con.getHeaderFields();
-
-            for (Map.Entry<String, List<String>> entry : map.entrySet()) {
-                System.out.println(entry.getKey() + ": " + entry.getValue());
-            }
-            System.out.println();
-            System.out.println("Get Header by key:");
-
             String server = con.getHeaderField("Cache-Control");
-            String[] cacheControl = server.split(",");
-            String[] arr = cacheControl[0].split("=");//max-age = 600
-            timeOutt = Integer.parseInt(arr[1]);
 
             if (server == null) {
-                System.out.println("Key 'Content-Type' is not found!");
-            } else {
+                System.out.println("Key 'Cache-Control' is not found");
+            } else if(server.contains("no-cache")){
+                // Do not cache if the website says no cache
+                timeOutt = Optional.of(0L);
+            }
+
+            else {
+                String[] cacheControl = server.split(",");
+                String[] arr = cacheControl[0].split("=");//max-age = 600
+                timeOutt = Optional.of(Long.parseLong(arr[1]));
+                timeOutt = Optional.of(TimeUnit.SECONDS.toMillis(timeOutt.get()));
                 System.out.println("Cache-Control: " + timeOutt);
             }
 
@@ -75,11 +70,21 @@ public class CachingServiceImpl implements CachingService {
         URL url = null;
 
         try {
+
+            // use the user specified timeout
+            if(!timeOutt.isPresent()){
+                timeOutt = timeout;
+            }
+
             url = new URL(queryUrl);
-            String response = cacheManager.GetIfExists(queryUrl, timeout);
+            String response = cacheManager.GetIfExists(queryUrl, timeOutt);
             if(response == null){
                 response = getHTTPResponse(url);
-                cacheManager.AddToCache(queryUrl, response, timeout);
+
+                cacheManager.AddToCache(queryUrl, response, timeOutt);
+
+                // every time after storing reset the timeout
+                timeOutt = Optional.empty();
             }
 
             System.out.println(response);
@@ -87,5 +92,32 @@ public class CachingServiceImpl implements CachingService {
         } catch (MalformedURLException e){
             return "<html><body><H1>Incorrect Url</H1></Body></HTML>";
         }
+    }
+
+    @Override
+    public String clearCache(String queryUrl){
+        URL url = null;
+
+        try {
+            url = new URL(queryUrl);
+            cacheManager.clearCache(queryUrl);
+
+            return "<html><body><H1>Cache is clear for this url</H1></Body></HTML>";
+        } catch (MalformedURLException e){
+            return "<html><body><H1>Incorrect Url</H1></Body></HTML>";
+        }
+    }
+
+    @Override
+    public String getCache(){
+        ArrayList<String> list = cacheManager.getCache();
+        String listOfCache = "";
+        for(int i = 0; i < list.size() ; i++){
+            listOfCache += list.get(i)+"<br/>";
+        }
+        if(list.size() == 0){
+            return "<html><body><H1>The Cache is empty</H1></Body></HTML>";
+        }
+        return listOfCache;
     }
 }
