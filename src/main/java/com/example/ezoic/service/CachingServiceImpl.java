@@ -111,10 +111,11 @@ public class CachingServiceImpl implements CachingService {
     @Override
     public String getCache(){
         ArrayList<String> list = cacheManager.getCache();
-        String listOfCache = "";
+        String listOfCache = "<ul>";
         for(int i = 0; i < list.size() ; i++){
-            listOfCache += list.get(i)+"<br/>";
+            listOfCache += "<li>"+list.get(i);
         }
+        listOfCache += "</ul>";
         if(list.size() == 0){
             return "<html><body><H1>The Cache is empty</H1></Body></HTML>";
         }
